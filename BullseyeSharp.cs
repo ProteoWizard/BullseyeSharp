@@ -45,13 +45,14 @@ namespace BullseyeSharp
         static string sPosFile;
         static string sNegFile;
         static string sSumFile;
-        static string sID = "BullseyeSharp v1.31";
+        static string sID = "BullseyeSharp v1.32";
+        static string sDate = "Apr 21 2022";
 
         static void Main(string[] args)
         {
             CKronik2 p1 = new CKronik2();
 
-            Console.WriteLine("BullseyeSharp, v1.31, Apr 15 2022");
+            Console.WriteLine(sID+", "+sDate);
             Console.WriteLine("Copyright 2008-2022 Mike Hoopmann, Ed Hsieh, Mike MacCoss");
             Console.WriteLine("University of Washington");
 
@@ -238,7 +239,7 @@ namespace BullseyeSharp
             {
                 s = sl.spectrum(sc, true);
                 sScanInfo scanInfo = processScanHeader(ref s);
-
+                
                 if (scanInfo.msLevel != 2) continue;
                 j = (int)(scanInfo.mz + 0.5);
                 x = 0;
@@ -423,7 +424,7 @@ namespace BullseyeSharp
                 //Preamble
                 f.Write(sID + "\nHarklor input: " + sHKFile + "\nMS/MS input file: " + sDataFile + "\nMS/MS spectra with new precursors: " + outFile + "\nRemaining spectra: " + outFile2 + "\n");
                 //Heading line
-                f.Write("MonoisotopicMass\tz\tCharge\tStartRT\tEndRT\tApexRT\tAveragine\tMS2Scans\n");
+                f.Write("MonoisotopicMass\tz\tCharge\tStartRT\tEndRT\tApexRT\tApexAbundance\tTotalAbundance\tAveragine\tMS2Scans\n");
                 for (i = 0; i < vMatch.Count; i++)
                 {
                     f.Write(p[vMatch[i].index].monoMass + "\t");
@@ -432,6 +433,8 @@ namespace BullseyeSharp
                     f.Write(p[vMatch[i].index].firstRTime + "\t");
                     f.Write(p[vMatch[i].index].lastRTime + "\t");
                     f.Write(p[vMatch[i].index].rTime + "\t");
+                    f.Write(p[vMatch[i].index].intensity + "\t");
+                    f.Write(p[vMatch[i].index].sumIntensity + "\t");
                     f.Write(averagine(p[vMatch[i].index].monoMass) + "\t");
                     f.Write(vMatch[i].scanNumber);
                     while (i < (vMatch.Count - 1) && vMatch[i + 1].index == vMatch[i].index)
@@ -522,7 +525,11 @@ namespace BullseyeSharp
             {
                 foreach (CVParam cv in sc.cvParams)
                 {
-                    if (cv.name.CompareTo("scan start time") == 0) si.rTime = (float)cv.value/60;
+                    if (cv.name.CompareTo("scan start time") == 0)
+                    {
+                        if (cv.unitsName == "minute") si.rTime = (float)cv.value;
+                        else si.rTime = (float)cv.value / 60; //assuming if not minutes, then seconds.
+                    }
                 }
             }
 
