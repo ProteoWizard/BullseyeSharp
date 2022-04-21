@@ -232,7 +232,7 @@ namespace BullseyeSharp
             a = 0;
             
             MSDataFile msd = new MSDataFile(sDataFile);
-            Software sw = new Software("BullseyeSharp", new CVParam(pwiz.CLI.cv.CVID.MS_analysis_software), "1.30");
+            Software sw = new Software("BullseyeSharp", new CVParam(pwiz.CLI.cv.CVID.MS_analysis_software), "1.32");
             msd.softwareList.Add(sw);
             SpectrumList sl = msd.run.spectrumList;
             for (int sc = 0; sc < sl.size(); sc++)
