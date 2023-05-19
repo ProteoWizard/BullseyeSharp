@@ -1,4 +1,13 @@
-﻿using System;
+﻿// Hints to ReSharper for quiet compile in Skyline (mostly about this code not worrying about localization)
+// ReSharper disable LocalizableElement
+// ReSharper disable StringCompareToIsCultureSpecific
+// ReSharper disable UseCollectionCountProperty
+// ReSharper disable SpecifyACultureInStringConversionExplicitly
+// ReSharper disable PossibleLossOfFraction
+// ReSharper disable RedundantUsingDirective
+// ReSharper disable CheckNamespace
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -180,7 +189,8 @@ namespace BullseyeSharp
             SpectrumListSimple slPos = new SpectrumListSimple();
             SpectrumListSimple slNeg = new SpectrumListSimple();
             int i, j;
-            int[] lookup = new int[8001];
+            const int LOOKUP_LEN = 8001;
+            int[] lookup = new int[LOOKUP_LEN];
             double lowMass, highMass, ppm;
             int x, z;
             int a, b;
@@ -206,6 +216,8 @@ namespace BullseyeSharp
                 return;
             }
 
+            var bSkyline = p.size() > 0 && !string.IsNullOrEmpty(p[0].averagineHK); // Is this the Skyline use case?
+
             //Hardklor results are sorted and indexed to improve speed of Bullseye
             Console.Write("Sorting Hardklor results...");
             p.sortBasePeak();
@@ -213,14 +225,17 @@ namespace BullseyeSharp
 
             Console.Write("Building lookup table...");
             j = 0;
-            for (i = 0; i < 8001; i++)
+            if (p.size() > 0)
             {
-                while (p[j].basePeak < i)
+                for (i = 0; i < LOOKUP_LEN; i++)
                 {
-                    if (j >= p.size() - 1) break;
-                    j++;
+                    while (p[j].basePeak < i)
+                    {
+                        if (j >= p.size() - 1) break;
+                        j++;
+                    }
+                    lookup[i] = j;
                 }
-                lookup[i] = j;
             }
             Console.WriteLine("Done!");
 
@@ -365,10 +380,15 @@ namespace BullseyeSharp
                 //Update file position counter
                 if (sc * 100 / sl.size() > iPercent)
                 {
-                    if (iPercent < 10) Console.Write("\b");
-                    else Console.Write("\b\b");
+                    if (!bSkyline)
+                    {
+                        if (iPercent < 10) Console.Write("\b");
+                        else Console.Write("\b\b");
+                    }
+
                     iPercent = sc * 100 / sl.size();
                     Console.Write(iPercent);
+                    if (bSkyline) Console.WriteLine("%");
                 }
             }
 
@@ -435,7 +455,7 @@ namespace BullseyeSharp
                     f.Write(p[vMatch[i].index].rTime + "\t");
                     f.Write(p[vMatch[i].index].intensity + "\t");
                     f.Write(p[vMatch[i].index].sumIntensity + "\t");
-                    f.Write(averagine(p[vMatch[i].index].monoMass) + "\t");
+                    f.Write((string.IsNullOrEmpty(p[vMatch[i].index].averagineHK) ? averagine(p[vMatch[i].index].monoMass) : p[vMatch[i].index].averagineHK) + "\t");
                     f.Write(vMatch[i].scanNumber);
                     while (i < (vMatch.Count - 1) && vMatch[i + 1].index == vMatch[i].index)
                     {

@@ -1,4 +1,15 @@
-﻿using System;
+﻿// Hints to ReSharper for quiet compile in Skyline (mostly about this code not worrying about localization)
+// ReSharper disable LocalizableElement
+// ReSharper disable StringCompareToIsCultureSpecific
+// ReSharper disable UseCollectionCountProperty
+// ReSharper disable SpecifyACultureInStringConversionExplicitly
+// ReSharper disable PossibleLossOfFraction
+// ReSharper disable RedundantNameQualifier
+// ReSharper disable RedundantCast
+// ReSharper disable RedundantUsingDirective
+// ReSharper disable CheckNamespace
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -15,6 +26,7 @@ namespace BullseyeSharp
         public double basePeak;
         public double xCorr;
         public string mods;
+        public string averagineHK; // The averagine formula used in Hardklor (Skyline version)
     }
 
     public class CScan
@@ -43,6 +55,7 @@ namespace BullseyeSharp
         public float rTime;
         public int scanNum;
         public double xCorr;
+        public string averagineHK; // The averagine formula used in Hardklor (Skyline version)
 
         //Constructor
         public CProfileData()
@@ -75,8 +88,10 @@ namespace BullseyeSharp
         public double xCorr;
 
         public string mods;
-        public string gene;
-        public string sequence;
+        //public string gene;
+        //public string sequence;
+        public string averagineHK; // The averagine formula reported by Hardklor (Skyline version)
+        public string file;
 
         public List<CProfileData> profile;
 
@@ -189,14 +204,18 @@ namespace BullseyeSharp
                 else
                 {
                     pepCount++;
-                    allScans.Last().vPep.Add(new CPep());
                     string[] tokens = line.Split('\t', '\n', '\r');
-                    allScans.Last().vPep.Last().monoMass = Convert.ToDouble(tokens[1]);
-                    allScans.Last().vPep.Last().charge = Convert.ToInt32(tokens[2]);
-                    allScans.Last().vPep.Last().intensity = (float)Convert.ToDouble(tokens[3]);
-                    allScans.Last().vPep.Last().basePeak = Convert.ToDouble(tokens[4]);
-                    allScans.Last().vPep.Last().mods = tokens[7];
-                    allScans.Last().vPep.Last().xCorr = Convert.ToDouble(tokens[8]);
+                    var cPep = new CPep()
+                    {
+                        monoMass = Convert.ToDouble(tokens[1]),
+                        charge = Convert.ToInt32(tokens[2]),
+                        intensity = (float)Convert.ToDouble(tokens[3]),
+                        basePeak = Convert.ToDouble(tokens[4]),
+                        mods = tokens[7],
+                        xCorr = Convert.ToDouble(tokens[8]),
+                        averagineHK = (tokens.Length > 9) ? tokens[9] : string.Empty // Only found in Skyline version of Hardklo,
+                    };
+                    allScans.Last().vPep.Add(cPep);
                 }
             }
 
@@ -208,7 +227,10 @@ namespace BullseyeSharp
             int startCount = pepCount;
             int lastPercent = 0;
 
+            var bSkyline = pepCount >0 && !string.IsNullOrEmpty(allScans[0].vPep[0].averagineHK); // For Skyline, a slightly different progress indicator
+
             Console.Write(lastPercent);// cout << lastPercent;
+            if (bSkyline) Console.WriteLine("%"); // Hint for Skyline's process handler
 
             //Perform the Kronik analysis
             while (pepCount > 0)
@@ -281,45 +303,49 @@ namespace BullseyeSharp
                     while (vRight.Count > 0 && vRight[vRight.Count - 1].pep < 0) vRight.RemoveAt(vRight.Count-1);
 
                     //apply basic information
-                    vPeps.Add(new CPepProfile());
-                    vPeps.Last().rTime = allScans[sIndex].rTime;
-                    vPeps.Last().basePeak = allScans[sIndex].vPep[pIndex].basePeak;
-                    vPeps.Last().bestScan = allScans[sIndex].scanNum;
-                    vPeps.Last().charge = allScans[sIndex].vPep[pIndex].charge;
-                    vPeps.Last().intensity = allScans[sIndex].vPep[pIndex].intensity;
-                    vPeps.Last().monoMass = allScans[sIndex].vPep[pIndex].monoMass;
-                    vPeps.Last().mods = allScans[sIndex].vPep[pIndex].mods;
-                    vPeps.Last().xCorr = allScans[sIndex].vPep[pIndex].xCorr;
-                    vPeps.Last().setPoints(vLeft.Count + vRight.Count + 1);
-                    //vPeps.Last().profile = new List<CProfileData>();
+                    var cPepProfile = new CPepProfile();
+                    vPeps.Add(cPepProfile);
+                    cPepProfile.file = allScans[sIndex].file;
+                    cPepProfile.rTime = allScans[sIndex].rTime;
+                    cPepProfile.basePeak = allScans[sIndex].vPep[pIndex].basePeak;
+                    cPepProfile.bestScan = allScans[sIndex].scanNum;
+                    cPepProfile.charge = allScans[sIndex].vPep[pIndex].charge;
+                    cPepProfile.intensity = allScans[sIndex].vPep[pIndex].intensity;
+                    cPepProfile.monoMass = allScans[sIndex].vPep[pIndex].monoMass;
+                    cPepProfile.mods = allScans[sIndex].vPep[pIndex].mods;
+                    cPepProfile.xCorr = allScans[sIndex].vPep[pIndex].xCorr;
+                    cPepProfile.averagineHK = allScans[sIndex].vPep[pIndex].averagineHK;
+                    cPepProfile.setPoints(vLeft.Count + vRight.Count + 1);
+                    //cPepProfile.profile = new List<CProfileData>();
                     if (vLeft.Count == 0)
                     {
-                        vPeps.Last().lowScan = allScans[sIndex].scanNum;
-                        vPeps.Last().firstRTime = allScans[sIndex].rTime;
+                        cPepProfile.lowScan = allScans[sIndex].scanNum;
+                        cPepProfile.firstRTime = allScans[sIndex].rTime;
                     }
                     else
                     {
-                        vPeps.Last().lowScan = allScans[vLeft[vLeft.Count - 1].scan].scanNum;
-                        vPeps.Last().firstRTime = allScans[vLeft[vLeft.Count - 1].scan].rTime;
+                        cPepProfile.lowScan = allScans[vLeft[vLeft.Count - 1].scan].scanNum;
+                        cPepProfile.firstRTime = allScans[vLeft[vLeft.Count - 1].scan].rTime;
                     }
                     if (vRight.Count == 0)
                     {
-                        vPeps.Last().highScan = allScans[sIndex].scanNum;
-                        vPeps.Last().lastRTime = allScans[sIndex].rTime;
+                        cPepProfile.highScan = allScans[sIndex].scanNum;
+                        cPepProfile.lastRTime = allScans[sIndex].rTime;
                     }
                     else
                     {
-                        vPeps.Last().highScan = allScans[vRight[vRight.Count - 1].scan].scanNum;
-                        vPeps.Last().lastRTime = allScans[vRight[vRight.Count - 1].scan].rTime;
+                        cPepProfile.highScan = allScans[vRight[vRight.Count - 1].scan].scanNum;
+                        cPepProfile.lastRTime = allScans[vRight[vRight.Count - 1].scan].rTime;
                     }
 
                     //apply datapoints
-                    vPeps.Last().profile[0].intensity = allScans[sIndex].vPep[pIndex].intensity;
-                    vPeps.Last().profile[0].interpolated = false;
-                    vPeps.Last().profile[0].monoMass = allScans[sIndex].vPep[pIndex].monoMass;
-                    vPeps.Last().profile[0].rTime = allScans[sIndex].rTime;
-                    vPeps.Last().profile[0].scanNum = allScans[sIndex].scanNum;
-                    vPeps.Last().profile[0].xCorr = allScans[sIndex].vPep[pIndex].xCorr;
+                    cPepProfile.profile[0].intensity = allScans[sIndex].vPep[pIndex].intensity;
+                    cPepProfile.profile[0].interpolated = false;
+                    cPepProfile.profile[0].monoMass = allScans[sIndex].vPep[pIndex].monoMass;
+                    cPepProfile.profile[0].rTime = allScans[sIndex].rTime;
+                    cPepProfile.profile[0].scanNum = allScans[sIndex].scanNum;
+                    cPepProfile.profile[0].xCorr = allScans[sIndex].vPep[pIndex].xCorr;
+                    cPepProfile.profile[0].averagineHK = allScans[sIndex].vPep[pIndex].averagineHK;
 
                     i = 1;
                     j = 0;
@@ -333,8 +359,8 @@ namespace BullseyeSharp
                             k2 = j + k;
                             if (j == 0)
                             {
-                                vPeps.Last().profile[i].intensity = (float)interpolate(vPeps.Last().profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, (double)vPeps.Last().profile[0].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
-                                vPeps.Last().profile[i].monoMass = interpolate(vPeps.Last().profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, vPeps.Last().profile[0].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
+                                cPepProfile.profile[i].intensity = (float)interpolate(cPepProfile.profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, (double)cPepProfile.profile[0].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
+                                cPepProfile.profile[i].monoMass = interpolate(cPepProfile.profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, cPepProfile.profile[0].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
                             }
                             else
                             {
@@ -343,28 +369,29 @@ namespace BullseyeSharp
                                 k1 = j + k;
                                 if (k1 < 0)
                                 {
-                                    vPeps.Last().profile[i].intensity = (float)interpolate(vPeps.Last().profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, (double)vPeps.Last().profile[0].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
-                                    vPeps.Last().profile[i].monoMass = interpolate(vPeps.Last().profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, vPeps.Last().profile[0].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
+                                    cPepProfile.profile[i].intensity = (float)interpolate(cPepProfile.profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, (double)cPepProfile.profile[0].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
+                                    cPepProfile.profile[i].monoMass = interpolate(cPepProfile.profile[0].scanNum, allScans[vLeft[k2].scan].scanNum, cPepProfile.profile[0].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
                                 }
                                 else
                                 {
-                                    vPeps.Last().profile[i].intensity = (float)interpolate(allScans[vLeft[k1].scan].scanNum, allScans[vLeft[k2].scan].scanNum, (double)allScans[vLeft[k1].scan].vPep[vLeft[k1].pep].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
-                                    vPeps.Last().profile[i].monoMass = interpolate(allScans[vLeft[k1].scan].scanNum, allScans[vLeft[k2].scan].scanNum, allScans[vLeft[k1].scan].vPep[vLeft[k1].pep].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
+                                    cPepProfile.profile[i].intensity = (float)interpolate(allScans[vLeft[k1].scan].scanNum, allScans[vLeft[k2].scan].scanNum, (double)allScans[vLeft[k1].scan].vPep[vLeft[k1].pep].intensity, (double)allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].intensity, allScans[vLeft[j].scan].scanNum);
+                                    cPepProfile.profile[i].monoMass = interpolate(allScans[vLeft[k1].scan].scanNum, allScans[vLeft[k2].scan].scanNum, allScans[vLeft[k1].scan].vPep[vLeft[k1].pep].monoMass, allScans[vLeft[k2].scan].vPep[vLeft[k2].pep].monoMass, allScans[vLeft[j].scan].scanNum);
                                 }
                             }
-                            vPeps.Last().profile[i].interpolated = true;
-                            vPeps.Last().profile[i].rTime = allScans[vLeft[j].scan].rTime;
-                            vPeps.Last().profile[i].scanNum = allScans[vLeft[j].scan].scanNum;
-                            vPeps.Last().profile[i].xCorr = 0.0;
+                            cPepProfile.profile[i].interpolated = true;
+                            cPepProfile.profile[i].rTime = allScans[vLeft[j].scan].rTime;
+                            cPepProfile.profile[i].scanNum = allScans[vLeft[j].scan].scanNum;
+                            cPepProfile.profile[i].xCorr = 0.0;
                         }
                         else
                         {
-                            vPeps.Last().profile[i].intensity = allScans[vLeft[j].scan].vPep[vLeft[j].pep].intensity;
-                            vPeps.Last().profile[i].interpolated = false;
-                            vPeps.Last().profile[i].monoMass = allScans[vLeft[j].scan].vPep[vLeft[j].pep].monoMass;
-                            vPeps.Last().profile[i].rTime = allScans[vLeft[j].scan].rTime;
-                            vPeps.Last().profile[i].scanNum = allScans[vLeft[j].scan].scanNum;
-                            vPeps.Last().profile[i].xCorr = allScans[vLeft[j].scan].vPep[vLeft[j].pep].xCorr;
+                            cPepProfile.profile[i].intensity = allScans[vLeft[j].scan].vPep[vLeft[j].pep].intensity;
+                            cPepProfile.profile[i].interpolated = false;
+                            cPepProfile.profile[i].monoMass = allScans[vLeft[j].scan].vPep[vLeft[j].pep].monoMass;
+                            cPepProfile.profile[i].rTime = allScans[vLeft[j].scan].rTime;
+                            cPepProfile.profile[i].scanNum = allScans[vLeft[j].scan].scanNum;
+                            cPepProfile.profile[i].xCorr = allScans[vLeft[j].scan].vPep[vLeft[j].pep].xCorr;
+                            cPepProfile.profile[i].averagineHK = allScans[vLeft[j].scan].vPep[vLeft[j].pep].averagineHK;
                         }
                         i++;
                         j++;
@@ -381,8 +408,8 @@ namespace BullseyeSharp
                             k2 = j + k;
                             if (j == 0)
                             {
-                                vPeps.Last().profile[i].intensity = (float)interpolate(vPeps.Last().profile[0].scanNum, allScans[vRight[k2].scan].scanNum, vPeps.Last().profile[0].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
-                                vPeps.Last().profile[i].monoMass = interpolate(vPeps.Last().profile[0].scanNum, allScans[vRight[k2].scan].scanNum, vPeps.Last().profile[0].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
+                                cPepProfile.profile[i].intensity = (float)interpolate(cPepProfile.profile[0].scanNum, allScans[vRight[k2].scan].scanNum, cPepProfile.profile[0].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
+                                cPepProfile.profile[i].monoMass = interpolate(cPepProfile.profile[0].scanNum, allScans[vRight[k2].scan].scanNum, cPepProfile.profile[0].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
                             }
                             else
                             {
@@ -391,39 +418,40 @@ namespace BullseyeSharp
                                 k1 = j + k;
                                 if (k1 < 0)
                                 {
-                                    vPeps.Last().profile[i].intensity = (float)interpolate(vPeps.Last().profile[0].scanNum, allScans[vRight[k2].scan].scanNum, vPeps.Last().profile[0].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
-                                    vPeps.Last().profile[i].monoMass = interpolate(vPeps.Last().profile[0].scanNum, allScans[vRight[k2].scan].scanNum, vPeps.Last().profile[0].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
+                                    cPepProfile.profile[i].intensity = (float)interpolate(cPepProfile.profile[0].scanNum, allScans[vRight[k2].scan].scanNum, cPepProfile.profile[0].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
+                                    cPepProfile.profile[i].monoMass = interpolate(cPepProfile.profile[0].scanNum, allScans[vRight[k2].scan].scanNum, cPepProfile.profile[0].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
                                 }
                                 else
                                 {
-                                    vPeps.Last().profile[i].intensity = (float)interpolate(allScans[vRight[k1].scan].scanNum, allScans[vRight[k2].scan].scanNum, allScans[vRight[k1].scan].vPep[vRight[k1].pep].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
-                                    vPeps.Last().profile[i].monoMass = interpolate(allScans[vRight[k1].scan].scanNum, allScans[vRight[k2].scan].scanNum, allScans[vRight[k1].scan].vPep[vRight[k1].pep].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
+                                    cPepProfile.profile[i].intensity = (float)interpolate(allScans[vRight[k1].scan].scanNum, allScans[vRight[k2].scan].scanNum, allScans[vRight[k1].scan].vPep[vRight[k1].pep].intensity, allScans[vRight[k2].scan].vPep[vRight[k2].pep].intensity, allScans[vRight[j].scan].scanNum);
+                                    cPepProfile.profile[i].monoMass = interpolate(allScans[vRight[k1].scan].scanNum, allScans[vRight[k2].scan].scanNum, allScans[vRight[k1].scan].vPep[vRight[k1].pep].monoMass, allScans[vRight[k2].scan].vPep[vRight[k2].pep].monoMass, allScans[vRight[j].scan].scanNum);
                                 }
                             }
-                            vPeps.Last().profile[i].interpolated = true;
-                            vPeps.Last().profile[i].rTime = allScans[vRight[j].scan].rTime;
-                            vPeps.Last().profile[i].scanNum = allScans[vRight[j].scan].scanNum;
-                            vPeps.Last().profile[i].xCorr = 0.0;
+                            cPepProfile.profile[i].interpolated = true;
+                            cPepProfile.profile[i].rTime = allScans[vRight[j].scan].rTime;
+                            cPepProfile.profile[i].scanNum = allScans[vRight[j].scan].scanNum;
+                            cPepProfile.profile[i].xCorr = 0.0;
                         }
                         else
                         {
-                            vPeps.Last().profile[i].intensity = allScans[vRight[j].scan].vPep[vRight[j].pep].intensity;
-                            vPeps.Last().profile[i].interpolated = false;
-                            vPeps.Last().profile[i].monoMass = allScans[vRight[j].scan].vPep[vRight[j].pep].monoMass;
-                            vPeps.Last().profile[i].rTime = allScans[vRight[j].scan].rTime;
-                            vPeps.Last().profile[i].scanNum = allScans[vRight[j].scan].scanNum;
-                            vPeps.Last().profile[i].xCorr = allScans[vRight[j].scan].vPep[vRight[j].pep].xCorr;
+                            cPepProfile.profile[i].intensity = allScans[vRight[j].scan].vPep[vRight[j].pep].intensity;
+                            cPepProfile.profile[i].interpolated = false;
+                            cPepProfile.profile[i].monoMass = allScans[vRight[j].scan].vPep[vRight[j].pep].monoMass;
+                            cPepProfile.profile[i].rTime = allScans[vRight[j].scan].rTime;
+                            cPepProfile.profile[i].scanNum = allScans[vRight[j].scan].scanNum;
+                            cPepProfile.profile[i].xCorr = allScans[vRight[j].scan].vPep[vRight[j].pep].xCorr;
+                            cPepProfile.profile[i].averagineHK = allScans[vRight[j].scan].vPep[vRight[j].pep].averagineHK;
                         }
                         i++;
                         j++;
                     }
 
                     //sort the profile
-                    vPeps.Last().profile.Sort((a, b) => a.scanNum.CompareTo(b.scanNum));
+                    cPepProfile.profile.Sort((a, b) => a.scanNum.CompareTo(b.scanNum));
 
                     //summed intensity (including interpolation)
-                    vPeps.Last().sumIntensity = 0.0f;
-                    for (i = 0; i < vPeps.Last().profile.Count; i++) vPeps.Last().sumIntensity += vPeps.Last().profile[i].intensity;
+                    cPepProfile.sumIntensity = 0.0f;
+                    for (i = 0; i < cPepProfile.profile.Count; i++) cPepProfile.sumIntensity += cPepProfile.profile[i].intensity;
 
                     //Erase datapoints already used
                     for (i = 0; i < vLeft.Count; i++)
@@ -448,7 +476,10 @@ namespace BullseyeSharp
                 int iPercent = 100 - (int)((float)pepCount / (float)startCount * 100.0);
                 if (iPercent > lastPercent)
                 {
-                    Console.Write("\b\b\b" + iPercent); // cout << "\b\b\b" << iPercent;
+                    if (bSkyline) 
+                        Console.WriteLine($"{iPercent}%"); // Hint for Skyline's process handler
+                    else 
+                        Console.Write("\b\b\b" + iPercent); // cout << "\b\b\b" << iPercent;
                     lastPercent = iPercent;
                 }
 
@@ -460,11 +491,12 @@ namespace BullseyeSharp
 
                 //Heading line
                 f.Write("File\tFirst Scan\tLast Scan\tNum of Scans\tCharge\tMonoisotopic Mass\tBase Isotope Peak\t");
-                f.Write("Best Intensity\tSummed Intensity\tFirst RTime\tLast RTime\tBest RTime\tBest Correlation\tModifications\n");
+                f.Write("Best Intensity\tSummed Intensity\tFirst RTime\tLast RTime\tBest RTime\tBest Correlation\tModifications");
+                f.WriteLine(bSkyline?"\tBest Scan\tAveragine":string.Empty);
 
                 for (i = 0; i < vPeps.Count; i++)
                 {
-                    f.Write("NULL\t");
+                    f.Write($"{vPeps[i].file}\t");
                     f.Write(vPeps[i].lowScan + "\t");
                     f.Write(vPeps[i].highScan + "\t");
                     f.Write(vPeps[i].profile.Count + "\t");
@@ -477,7 +509,7 @@ namespace BullseyeSharp
                     f.Write(vPeps[i].lastRTime + "\t");
                     f.Write(vPeps[i].rTime + "\t");
                     f.Write(vPeps[i].xCorr + "\t");
-                    f.WriteLine(vPeps[i].mods);
+                    f.WriteLine(bSkyline ? $"{vPeps[i].mods}\t{vPeps[i].bestScan}\t{vPeps[i].averagineHK}" : vPeps[i].mods);
                 }
                 f.Close();
             }
@@ -487,6 +519,7 @@ namespace BullseyeSharp
 
         public void removeContam(double contam)
         {
+            if (contam <= 0.0) return;
             vPeps = vPeps.FindAll(a => (a.lastRTime - a.firstRTime) <= contam);
         }
         public void removeMass(double minMass, double maxMass)
