@@ -227,7 +227,7 @@ namespace BullseyeSharp
             int startCount = pepCount;
             int lastPercent = 0;
 
-            var bSkyline = pepCount >0 && !string.IsNullOrEmpty(allScans[0].vPep[0].averagineHK); // For Skyline, a slightly different progress indicator
+            var bSkyline = !string.IsNullOrEmpty(allScans.SelectMany(s=>s.vPep).FirstOrDefault()?.averagineHK); // For Skyline, a slightly different progress indicator
 
             Console.Write(lastPercent);// cout << lastPercent;
             if (bSkyline) Console.WriteLine("%"); // Hint for Skyline's process handler
