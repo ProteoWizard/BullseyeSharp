@@ -257,6 +257,7 @@ namespace BullseyeSharp
                 
                 if (scanInfo.msLevel != 2) continue;
                 j = (int)(scanInfo.mz + 0.5);
+                if (j == 0 || j >= LOOKUP_LEN-1) continue;
                 x = 0;
                 vHit.Clear();
 
