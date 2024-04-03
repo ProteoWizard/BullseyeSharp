@@ -137,11 +137,10 @@ namespace BullseyeSharp
             set => vPeps[i] = value;
         }
 
-        public bool findMax(ref List<CScan> v, ref int s, ref int p)
+        public bool findMax(List<CScan> v, ref int s)
         {
             float max = 0;
             int i;
-            p = 0;
             for (i = 0; i < v.Count(); i++)
             {
                 if (v[i].vPep.Count() == 0) continue;
@@ -165,7 +164,6 @@ namespace BullseyeSharp
         {
             char tag;
             int sIndex = 0;
-            int pIndex = 0;
             int i, j, k, k1, k2;
 
             int pepCount = 0;
@@ -235,10 +233,10 @@ namespace BullseyeSharp
             //Perform the Kronik analysis
             while (pepCount > 0)
             {
-                if (!findMax(ref allScans, ref sIndex, ref pIndex)) break;
+                if (!findMax(allScans, ref sIndex)) break;
 
-                mass = allScans[sIndex].vPep[pIndex].monoMass;
-                charge = allScans[sIndex].vPep[pIndex].charge;
+                mass = allScans[sIndex].vPep[0].monoMass;
+                charge = allScans[sIndex].vPep[0].charge;
                 matchCount = 1;
 
                 //look left
@@ -307,14 +305,14 @@ namespace BullseyeSharp
                     vPeps.Add(cPepProfile);
                     cPepProfile.file = allScans[sIndex].file;
                     cPepProfile.rTime = allScans[sIndex].rTime;
-                    cPepProfile.basePeak = allScans[sIndex].vPep[pIndex].basePeak;
+                    cPepProfile.basePeak = allScans[sIndex].vPep[0].basePeak;
                     cPepProfile.bestScan = allScans[sIndex].scanNum;
-                    cPepProfile.charge = allScans[sIndex].vPep[pIndex].charge;
-                    cPepProfile.intensity = allScans[sIndex].vPep[pIndex].intensity;
-                    cPepProfile.monoMass = allScans[sIndex].vPep[pIndex].monoMass;
-                    cPepProfile.mods = allScans[sIndex].vPep[pIndex].mods;
-                    cPepProfile.xCorr = allScans[sIndex].vPep[pIndex].xCorr;
-                    cPepProfile.averagineHK = allScans[sIndex].vPep[pIndex].averagineHK;
+                    cPepProfile.charge = allScans[sIndex].vPep[0].charge;
+                    cPepProfile.intensity = allScans[sIndex].vPep[0].intensity;
+                    cPepProfile.monoMass = allScans[sIndex].vPep[0].monoMass;
+                    cPepProfile.mods = allScans[sIndex].vPep[0].mods;
+                    cPepProfile.xCorr = allScans[sIndex].vPep[0].xCorr;
+                    cPepProfile.averagineHK = allScans[sIndex].vPep[0].averagineHK;
                     cPepProfile.setPoints(vLeft.Count + vRight.Count + 1);
                     //cPepProfile.profile = new List<CProfileData>();
                     if (vLeft.Count == 0)
@@ -339,13 +337,13 @@ namespace BullseyeSharp
                     }
 
                     //apply datapoints
-                    cPepProfile.profile[0].intensity = allScans[sIndex].vPep[pIndex].intensity;
+                    cPepProfile.profile[0].intensity = allScans[sIndex].vPep[0].intensity;
                     cPepProfile.profile[0].interpolated = false;
-                    cPepProfile.profile[0].monoMass = allScans[sIndex].vPep[pIndex].monoMass;
+                    cPepProfile.profile[0].monoMass = allScans[sIndex].vPep[0].monoMass;
                     cPepProfile.profile[0].rTime = allScans[sIndex].rTime;
                     cPepProfile.profile[0].scanNum = allScans[sIndex].scanNum;
-                    cPepProfile.profile[0].xCorr = allScans[sIndex].vPep[pIndex].xCorr;
-                    cPepProfile.profile[0].averagineHK = allScans[sIndex].vPep[pIndex].averagineHK;
+                    cPepProfile.profile[0].xCorr = allScans[sIndex].vPep[0].xCorr;
+                    cPepProfile.profile[0].averagineHK = allScans[sIndex].vPep[0].averagineHK;
 
                     i = 1;
                     j = 0;
@@ -469,7 +467,7 @@ namespace BullseyeSharp
                 }
 
                 //erase the one we're looking at
-                allScans[sIndex].vPep.RemoveAt(pIndex);
+                allScans[sIndex].vPep.RemoveAt(0);
                 pepCount--;
 
                 //update percent

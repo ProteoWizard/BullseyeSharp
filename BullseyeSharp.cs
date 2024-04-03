@@ -9,6 +9,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -59,6 +60,8 @@ namespace BullseyeSharp
 
         static void Main(string[] args)
         {
+            Stopwatch timer = null;
+
             CKronik2 p1 = new CKronik2();
 
             Console.WriteLine(sID+", "+sDate);
@@ -126,6 +129,11 @@ namespace BullseyeSharp
                 {
                     rtTolerance = Convert.ToDouble(args[++i]);
                 }
+                else if (args[i].CompareTo("--timer") == 0)
+                {
+                    timer = new Stopwatch();
+                    timer.Start();
+                }
                 else if (args[i][0] == '-')
                 {
                     Console.WriteLine("\nInvalid flag: " + args[i] + "\n\n");
@@ -149,16 +157,20 @@ namespace BullseyeSharp
 
             p1.processHK(sHKFile,sHKFile+".bs.kro");
 
-            //Remove contaminants
-            p1.removeContam(contam);
-            Console.WriteLine("Persistent peptides after removing contaminants: " + p1.size());
+            if (!string.IsNullOrEmpty(sPosFile)) // This won't be specified for MS1-only use
+            {
+                //Remove contaminants
+                p1.removeContam(contam);
+                Console.WriteLine("Persistent peptides after removing contaminants: " + p1.size());
 
-            //Filter based on size
-            p1.removeMass(minMass, maxMass);
-            Console.WriteLine("Persistent peptides from " + minMass + " to " + maxMass + ": " + p1.size());
+                //Filter based on size
+                p1.removeMass(minMass, maxMass);
+                Console.WriteLine("Persistent peptides from " + minMass + " to " + maxMass + ": " + p1.size());
 
-            matchMS2(ref p1, sDataFile, sPosFile, sNegFile);
-
+                matchMS2(ref p1, sDataFile, sPosFile, sNegFile);
+            }
+            if (timer != null)
+                Console.WriteLine($"Completed in {timer.Elapsed}");
         }
 
         static string averagine(double mass)
@@ -257,7 +269,6 @@ namespace BullseyeSharp
                 
                 if (scanInfo.msLevel != 2) continue;
                 j = (int)(scanInfo.mz + 0.5);
-                if (j == 0 || j >= LOOKUP_LEN-1) continue;
                 x = 0;
                 vHit.Clear();
 
