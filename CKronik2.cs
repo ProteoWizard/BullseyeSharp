@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BullseyeSharp
@@ -188,7 +189,21 @@ namespace BullseyeSharp
 
             //Read in the Hardklor results
             if (!System.IO.File.Exists(inFile)) return false;
-            foreach (string line in System.IO.File.ReadLines(inFile))
+            IEnumerable<string> lines = null;
+            for (var retry = 0; retry < 10; retry++)
+            {
+                try
+                {
+                    lines = System.IO.File.ReadLines(inFile);
+                    break;
+                }
+                catch (Exception)
+                {
+                    Thread.Sleep(1000); // Hardklor will have just written the file, antivirus may be scanning it etc
+                }
+            }
+
+            foreach (string line in lines ?? System.IO.File.ReadLines(inFile))
             {
                 tag = line[0];
                 if (tag == 'S')
