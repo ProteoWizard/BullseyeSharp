@@ -181,7 +181,6 @@ namespace BullseyeSharp
             int pepCount = 0;
             _allScans = new List<CScan>();
 
-            double ppm;
             int charge;
             int gap;
             int matchCount;
@@ -269,7 +268,7 @@ namespace BullseyeSharp
                 var maxScan = _allScans[sIndex];
 
                 var mass = maxScan.vPep[0].monoMass;
-                var ppmFactor =  1000000.0 / mass;
+                var massToler = mass * dPPMTol / 1000000.0;
                 charge = maxScan.vPep[0].charge;
                 matchCount = 1;
 
@@ -287,8 +286,8 @@ namespace BullseyeSharp
                     {
                         if (scanI.vPep[j].charge != charge) continue;
                         //if(allScans[i].vPep->at(j).intensity<0.0) continue;
-                        ppm = (scanI.vPep[j].monoMass - mass) * ppmFactor;
-                        if (Math.Abs(ppm) < dPPMTol)
+                        var massDiff = Math.Abs(scanI.vPep[j].monoMass - mass);
+                        if (massDiff < massToler)
                         {
                             iPep = j;
                             gap = 0;
@@ -316,8 +315,8 @@ namespace BullseyeSharp
                     {
                         if (scanI.vPep[j].charge != charge) continue;
                         //if(allScans[i].vPep->at(j).intensity<0.0) continue;
-                        ppm = (scanI.vPep[j].monoMass - mass) * ppmFactor;
-                        if (Math.Abs(ppm) < dPPMTol)
+                        var massDiff = Math.Abs(scanI.vPep[j].monoMass - mass);
+                        if (massDiff < massToler)
                         {
                             iPep = j;
                             gap = 0;
