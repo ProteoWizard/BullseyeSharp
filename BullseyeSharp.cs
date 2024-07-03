@@ -55,8 +55,11 @@ namespace BullseyeSharp
         static string sPosFile;
         static string sNegFile;
         static string sSumFile;
-        static string sID = "BullseyeSharp v1.32";
-        static string sDate = "Apr 21 2022";
+        static string sID = "v1.33"; // 1.33 has some tweaks for Skyline use - timer, performance improvements
+        static string sDate = "July 2 2024";
+        static string sCopyright = "Copyright 2008-2024 Mike Hoopmann, Ed Hsieh, Mike MacCoss";
+        static string sTimerArg = "--timer";
+
 
         static void Main(string[] args)
         {
@@ -64,9 +67,17 @@ namespace BullseyeSharp
 
             CKronik2 p1 = new CKronik2();
 
-            Console.WriteLine(sID+", "+sDate);
-            Console.WriteLine("Copyright 2008-2022 Mike Hoopmann, Ed Hsieh, Mike MacCoss");
-            Console.WriteLine("University of Washington");
+            if (args.Contains(sTimerArg))
+            {
+                // Skyline use, put copyright and version on a single line
+                Console.WriteLine($"{sID}, {sDate} {sCopyright} University of Washington");
+            }
+            else
+            {
+                Console.WriteLine("BullseyeSharp " +  sID + ", " + sDate);
+                Console.WriteLine(sCopyright);
+                Console.WriteLine("University of Washington");
+            }
 
             //Set global variables
             ppmTolerance = 10.0;
@@ -129,7 +140,7 @@ namespace BullseyeSharp
                 {
                     rtTolerance = Convert.ToDouble(args[++i]);
                 }
-                else if (args[i].CompareTo("--timer") == 0)
+                else if (args[i].CompareTo(sTimerArg) == 0)
                 {
                     timer = new Stopwatch();
                     timer.Start();
