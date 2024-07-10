@@ -23,7 +23,7 @@ namespace BullseyeSharp
     public class CPep
     {
         public int charge;
-        public uint intensity;
+        public float intensity;
         public double monoMass;
         public double basePeak;
         public double xCorr;
@@ -137,7 +137,7 @@ namespace BullseyeSharp
             set => vPeps[i] = value;
         }
 
-        private uint[] _highestRemainingIntensityPerScan;
+        private float[] _highestRemainingIntensityPerScan;
 
         private void UpdateIntensityMetadata(int scanIndex, int pepIndexRemoved)
         {
@@ -151,7 +151,7 @@ namespace BullseyeSharp
         // Return the index of the scan with the currently highest intensity remaining peptide
         public int findMax()
         {
-            uint max = 0;
+            float max = 0;
             var maxScanIndex = -1;
             for (var i = 0; i < _allScans.Count; i++) 
             {
@@ -233,11 +233,11 @@ namespace BullseyeSharp
                     {
                         monoMass = Convert.ToDouble(tokens[1]),
                         charge = Convert.ToInt32(tokens[2]),
-                        intensity = Convert.ToUInt32(tokens[3]),
+                        intensity = (float)Convert.ToDouble(tokens[3]),
                         basePeak = Convert.ToDouble(tokens[4]),
                         mods = tokens[7],
                         xCorr = Convert.ToDouble(tokens[8]),
-                        averagineHK = (tokens.Length > 9) ? tokens[9] : string.Empty // Only found in Skyline version of Hardklo,
+                        averagineHK = (tokens.Length > 9) ? tokens[9] : string.Empty // Only found in Skyline version of Hardklor
                     };
                     currentScan.vPep.Add(cPep);
                 }
