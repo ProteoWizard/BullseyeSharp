@@ -33,16 +33,22 @@ namespace BullseyeSharp
 
     public class CScan
     {
+        public const double MAX_SIM_WINDOW_MZ = 500.0; // Maximum scan window width (m/z) to treat as SIM data
+
         public List<CPep> vPep;
         public int scanNum;
         public string file;
         public float rTime;
+        public double scanWinLower;
+        public double scanWinUpper;  // 0 means no SIM window
 
         public CScan()
         {
             scanNum = 0;
             file = "";
             rTime = 0;
+            scanWinLower = 0;
+            scanWinUpper = 0;
             vPep = new List<CPep>();
         }
     }
@@ -224,6 +230,23 @@ namespace BullseyeSharp
                     currentScan.scanNum = Convert.ToInt32(tokens[1]);
                     currentScan.rTime = (float)Convert.ToDouble(tokens[2]);
                     currentScan.file = tokens[3];
+                    //Parse scan window bounds if present (last two numeric tokens on the S line)
+                    //Format: S\tscanNum\trTime\tfile\t[precursorInfo...]\tscanWinLower\tscanWinUpper
+                    if (tokens.Length >= 6)
+                    {
+                        //The last two non-empty tokens may be scan window bounds
+                        var lastIdx = tokens.Length - 1;
+                        while (lastIdx > 3 && string.IsNullOrEmpty(tokens[lastIdx])) lastIdx--;
+                        var prevIdx = lastIdx - 1;
+                        while (prevIdx > 3 && string.IsNullOrEmpty(tokens[prevIdx])) prevIdx--;
+                        if (prevIdx > 3 && double.TryParse(tokens[prevIdx], out var winLower) &&
+                            double.TryParse(tokens[lastIdx], out var winUpper) &&
+                            winUpper > 0 && winUpper > winLower && (winUpper - winLower) <= CScan.MAX_SIM_WINDOW_MZ)
+                        {
+                            currentScan.scanWinLower = winLower;
+                            currentScan.scanWinUpper = winUpper;
+                        }
+                    }
                 }
                 else
                 {
@@ -244,6 +267,10 @@ namespace BullseyeSharp
             }
 
             Console.WriteLine("" + pepCount + " peptides from " + _allScans.Count + " scans.\n");
+
+            //Detect SIM mode: check if any scan has a narrow window (width <= 500 m/z)
+            bool bSimData = _allScans.Any(s => s.scanWinUpper > 0 && (s.scanWinUpper - s.scanWinLower) <= CScan.MAX_SIM_WINDOW_MZ);
+
             for (i = 0; i < _allScans.Count; i++) _allScans[i].vPep.Sort((a, b) => b.intensity.CompareTo(a.intensity));
             //for (i = 0; i < 10; i++) Console.WriteLine("" + i + "\t" + allScans[0].vPep[i].intensity);
             Console.WriteLine("Finding persistent peptide signals:");
@@ -278,6 +305,16 @@ namespace BullseyeSharp
                 i = sIndex - 1;
                 while (i > -1 && gap <= iGapTol)
                 {
+                    //SIM-aware: skip scans whose window doesn't cover this feature's m/z
+                    if (bSimData && _allScans[i].scanWinUpper > 0)
+                    {
+                        double featureMZ = (mass + charge * 1.00727649) / charge;
+                        if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
+                        {
+                            i--;
+                            continue;
+                        }
+                    }
                     bMatch = false;
                     int iScan = i;
                     int iPep = -1;
@@ -307,6 +344,16 @@ namespace BullseyeSharp
                 i = sIndex + 1;
                 while (i < _allScans.Count && gap <= iGapTol)
                 {
+                    //SIM-aware: skip scans whose window doesn't cover this feature's m/z
+                    if (bSimData && _allScans[i].scanWinUpper > 0)
+                    {
+                        double featureMZ = (mass + charge * 1.00727649) / charge;
+                        if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
+                        {
+                            i++;
+                            continue;
+                        }
+                    }
                     bMatch = false;
                     int iScan = i;
                     int iPep = -1;
