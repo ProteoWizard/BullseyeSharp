@@ -33,8 +33,6 @@ namespace BullseyeSharp
 
     public class CScan
     {
-        public const double MAX_SIM_WINDOW_MZ = 500.0; // Maximum scan window width (m/z) to treat as SIM data
-
         public List<CPep> vPep;
         public int scanNum;
         public string file;
@@ -241,7 +239,7 @@ namespace BullseyeSharp
                         while (prevIdx > 3 && string.IsNullOrEmpty(tokens[prevIdx])) prevIdx--;
                         if (prevIdx > 3 && double.TryParse(tokens[prevIdx], out var winLower) &&
                             double.TryParse(tokens[lastIdx], out var winUpper) &&
-                            winUpper > 0 && winUpper > winLower && (winUpper - winLower) <= CScan.MAX_SIM_WINDOW_MZ)
+                            winLower > 0 && winUpper > 0)
                         {
                             currentScan.scanWinLower = winLower;
                             currentScan.scanWinUpper = winUpper;
@@ -267,10 +265,6 @@ namespace BullseyeSharp
             }
 
             Console.WriteLine("" + pepCount + " peptides from " + _allScans.Count + " scans.\n");
-
-            //Detect SIM mode: check if any scan has a narrow window (width <= 500 m/z)
-            bool bSimData = _allScans.Any(s => s.scanWinUpper > 0 && (s.scanWinUpper - s.scanWinLower) <= CScan.MAX_SIM_WINDOW_MZ);
-
             for (i = 0; i < _allScans.Count; i++) _allScans[i].vPep.Sort((a, b) => b.intensity.CompareTo(a.intensity));
             //for (i = 0; i < 10; i++) Console.WriteLine("" + i + "\t" + allScans[0].vPep[i].intensity);
             Console.WriteLine("Finding persistent peptide signals:");
@@ -298,6 +292,7 @@ namespace BullseyeSharp
                 var massToler = mass * dPPMTol / 1000000.0;
                 charge = maxScan.vPep[0].charge;
                 matchCount = 1;
+                double featureMZ = (mass + charge * 1.00727649) / charge;
 
                 //look left
                 vLeft.Clear();
@@ -305,10 +300,9 @@ namespace BullseyeSharp
                 i = sIndex - 1;
                 while (i > -1 && gap <= iGapTol)
                 {
-                    //SIM-aware: skip scans whose window doesn't cover this feature's m/z
-                    if (bSimData && _allScans[i].scanWinUpper > 0)
+                    // Skip scans whose window doesn't cover this feature's m/z
+                    if (_allScans[i].scanWinUpper > 0)
                     {
-                        double featureMZ = (mass + charge * 1.00727649) / charge;
                         if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
                         {
                             i--;
@@ -344,10 +338,9 @@ namespace BullseyeSharp
                 i = sIndex + 1;
                 while (i < _allScans.Count && gap <= iGapTol)
                 {
-                    //SIM-aware: skip scans whose window doesn't cover this feature's m/z
-                    if (bSimData && _allScans[i].scanWinUpper > 0)
+                    // Skip scans whose window doesn't cover this feature's m/z
+                    if (_allScans[i].scanWinUpper > 0)
                     {
-                        double featureMZ = (mass + charge * 1.00727649) / charge;
                         if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
                         {
                             i++;
