@@ -1,4 +1,4 @@
-﻿// Hints to ReSharper for quiet compile in Skyline (mostly about this code not worrying about localization)
+// Hints to ReSharper for quiet compile in Skyline (mostly about this code not worrying about localization)
 // ReSharper disable LocalizableElement
 // ReSharper disable StringCompareToIsCultureSpecific
 // ReSharper disable UseCollectionCountProperty
@@ -168,6 +168,13 @@ namespace BullseyeSharp
             return maxScanIndex;
         }
 
+        private const double PROTON = 1.00727649;
+
+        private static double MzFromMassCharge(double mass, int charge)
+        {
+            return (mass + charge * PROTON) / charge;
+        }
+
         public double interpolate(int x1, int x2, double y1, double y2, int x)
         {
             double m = (y2 - y1) / (x2 - x1);
@@ -292,7 +299,8 @@ namespace BullseyeSharp
                 var massToler = mass * dPPMTol / 1000000.0;
                 charge = maxScan.vPep[0].charge;
                 matchCount = 1;
-                double featureMZ = (mass + charge * 1.00727649) / charge;
+                double featureMzLow = MzFromMassCharge(mass - massToler, charge);
+                double featureMzHigh = MzFromMassCharge(mass + massToler, charge);
 
                 //look left
                 vLeft.Clear();
@@ -301,13 +309,11 @@ namespace BullseyeSharp
                 while (i > -1 && gap <= iGapTol)
                 {
                     // Skip scans whose window doesn't cover this feature's m/z
-                    if (_allScans[i].scanWinUpper > 0)
+                    if (_allScans[i].scanWinUpper > 0 &&
+                        (featureMzHigh < _allScans[i].scanWinLower || featureMzLow > _allScans[i].scanWinUpper))
                     {
-                        if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
-                        {
-                            i--;
-                            continue;
-                        }
+                        i--;
+                        continue;
                     }
                     bMatch = false;
                     int iScan = i;
@@ -339,13 +345,11 @@ namespace BullseyeSharp
                 while (i < _allScans.Count && gap <= iGapTol)
                 {
                     // Skip scans whose window doesn't cover this feature's m/z
-                    if (_allScans[i].scanWinUpper > 0)
+                    if (_allScans[i].scanWinUpper > 0 &&
+                        (featureMzHigh < _allScans[i].scanWinLower || featureMzLow > _allScans[i].scanWinUpper))
                     {
-                        if (featureMZ < _allScans[i].scanWinLower || featureMZ > _allScans[i].scanWinUpper)
-                        {
-                            i++;
-                            continue;
-                        }
+                        i++;
+                        continue;
                     }
                     bMatch = false;
                     int iScan = i;
