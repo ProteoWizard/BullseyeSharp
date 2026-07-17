@@ -1,0 +1,7 @@
+# Build output (produced when Skyline builds BullseyeSharp; never committed)
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio user-specific files
+.vs/
+*.user
